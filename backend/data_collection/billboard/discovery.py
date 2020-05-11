@@ -4,10 +4,11 @@ import regex
 import datetime
 import logging
 import os
+import argparse
 
 from bs4 import BeautifulSoup
 
-from consts import billboard_cookie_header, billboard_hot_100_base_url, billboard_hot_100_earliest_date
+from consts import billboard_hot_100_base_url, billboard_hot_100_earliest_date
 
 def next_chart_date(soup: BeautifulSoup):
     next_week_span_regex = regex.compile("\s*Next Week\s*")
@@ -27,7 +28,7 @@ def fetch_chart(base_url, start_date, html_parser_fn):
         dates.append(cur)
         url = f"{base_url}/{cur.strftime('%Y-%m-%d')}" 
         headers = {
-            "cookie": billboard_cookie_header
+            "cookie": os.getenv("BILLBOARD_COOKIE_HEADER")
         }
         res = requests.get(
             url,
@@ -42,7 +43,7 @@ def fetch_chart(base_url, start_date, html_parser_fn):
 def fetch_billboard_page(base_url, path) -> bytes:
     url = f"{base_url}{path}"
     headers = {
-        "cookie": billboard_cookie_header
+        "cookie": os.getenv("BILLBOARD_COOKIE_HEADER")
     }
     res = requests.get(
         url,
@@ -81,7 +82,17 @@ def save_as_html(content: bytes, chart_name, chart_date: datetime.date):
     logging.info(f"Successfully fetched {chart_file_name}")
 
 if __name__ == "__main__":
-    url = "/2020-05-02"
-    start_date = datetime.date(2020, 2, 8)
+    parser = argparse.ArgumentParser(description='Create a data fetch task')
+    parser.add_argument('Task',
+                       type=str,
+                       help='The data collection target')  
+    parser.add_argument('--year', type=int, required=True)
+    parser.add_argument('--month', type=int, required=True)
+    parser.add_argument('--day', type=int, required=True)
+
+    args = parser.parse_args()
+    if args.Task != "billboard_hot_100":
+        logging.error("Unrecognized data collection task")
+    start_date = datetime.date(args.year, args.month, args.day)
     dates = fetch_chart(billboard_hot_100_base_url, start_date, save_as_html)
-    print(dates)
+    # print(dates)

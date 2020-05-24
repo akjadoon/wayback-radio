@@ -5,6 +5,7 @@ import datetime
 import logging
 import os
 import argparse
+import time
 
 from bs4 import BeautifulSoup
 
@@ -34,9 +35,13 @@ def fetch_chart(base_url, start_date, html_parser_fn):
             url,
             headers=headers
         )
+        if res.status_code != 200:
+            raise Exception(f"Request for {cur} failed, {res.status_code}, headers{res.headers}")
         html_parser_fn(res.content, "billboard_hot_100", cur)
+        print(f"fetched {cur}")
         soup = BeautifulSoup(res.content, "lxml")
         cur = next_chart_date(soup)
+        time.sleep(2)
     return dates
 
 
@@ -66,7 +71,7 @@ def parse_billboard_hot_100_page(content: bytes):
 def save_as_html(content: bytes, chart_name, chart_date: datetime.date):
     if " " in chart_name:
         raise Exception("chart_name must not contain spaces")
-    chart_file_name = chart_name + chart_date.strftime("_%Y%m%d") + datetime.datetime.now().strftime("_%Y%m%d") + ".html"
+    chart_file_name = chart_name + chart_date.strftime("_%Y%m%d") + datetime.datetime.now().strftime("_%Y%m%d%H%M%s") + ".html"
     
     with open(
             os.path.join(

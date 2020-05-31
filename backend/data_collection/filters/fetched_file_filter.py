@@ -20,13 +20,13 @@ class FetchedFileFilter:
         ]
     
     def filter_latest_version_only(self, fetched_files: List[FetchedFile], provider: Provider, datasets: List[DataSet], start_date: datetime.date = None) -> List[FetchedFile]:
-        return self._latest_filter(
+        return sorted(self._latest_filter(
             self.filter(
                 fetched_files,
                 provider,
                 datasets,
                 start_date=start_date
-        ))
+        )), key=ff.event_date)
 
     def _latest_filter(self, fetched_files: List[FetchedFile]) -> List[FetchedFile]:
         names = set([ff.resource_name for ff in fetched_files])

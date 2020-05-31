@@ -9,6 +9,20 @@ from models import Provider, DataSet
 
 class FetchedFile:
     file_regex = regex.compile(r"(\w+)_(\w+)_(\d+)_(\d+)")
+    
+    def __init__(self, provider: Provider, dataset: DataSet, event_date: datetime.date, created_at: datetime.datetime, ext: str = "html"):
+        if dataset.name not in [
+            ds.name for ds in
+            provider.datasets
+        ]:
+            raise Exception(f"Got invalid dataset {dataset.name} for provider {provider.name}")
+
+        self.provider = provider
+        self.dataset = dataset
+        self.event_date = event_date
+        self.created_at = created_at
+        self.ext = ext
+
     @classmethod
     def from_file_name(cls, filename):
         match = cls.file_regex.match(filename)
@@ -33,22 +47,11 @@ class FetchedFile:
             return None
         return cls(provider, dataset, event_date, created_at)
 
-    def __init__(self, provider: Provider, dataset: DataSet, event_date: datetime.date, created_at: datetime.datetime, ext: str = "html"):
-        if dataset.name not in [
-            ds.name for ds in
-            provider.datasets
-        ]:
-            raise Exception(f"Got invalid dataset {dataset.name} for provider {provider.name}")
 
-        self.provider = provider
-        self.dataset = dataset
-        self.event_date = event_date
-        self.created_at = created_at
-        self.ext = ext
 
     @property
     def resource_name(self):
-        return self.provider.name + "_" + self.dataset.name
+        return self.provider.name + "_" + self.dataset.name + "_" + self.event_date.strftime("%Y%m%d")
     
     @property
     def name(self):

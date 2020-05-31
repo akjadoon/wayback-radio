@@ -26,7 +26,7 @@ class FetchedFileFilter:
                 provider,
                 datasets,
                 start_date=start_date
-        )), key=ff.event_date)
+        )), key=lambda ff: ff.event_date)
 
     def _latest_filter(self, fetched_files: List[FetchedFile]) -> List[FetchedFile]:
         names = set([ff.resource_name for ff in fetched_files])

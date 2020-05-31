@@ -6,11 +6,12 @@ import logging
 import os
 import datetime
 from typing import List
+
 from bs4 import BeautifulSoup
+
 from .fetcher import Fetcher
-from dataset import Dataset
-from provider import BillboardProvider
-from consts import local_data_path
+from models import DataSet, FetchedFile, BillboardProvider
+from fileio import fetched_file_io
 
 
 class BillboardFetcher(Fetcher):
@@ -29,7 +30,7 @@ class BillboardFetcher(Fetcher):
             logging.error(f"Cannot fetch {dataset_names} for billboard")
 
         for d in datasets:
-            dates = self.fetch_chart(d, self.save_as_html, start_date=start_date)
+            dates = self.fetch_chart(d, fetched_file_io.write, start_date=start_date)
 
     def next_chart_date(self, soup: BeautifulSoup):
         next_week_span_regex = regex.compile("\s*Next Week\s*")
@@ -41,7 +42,7 @@ class BillboardFetcher(Fetcher):
         link_child.parent['href'].split("/")[-1], "%Y-%m-%d"
         )
 
-    def fetch_chart(self, dataset: Dataset, html_parser_fn, start_date=None):
+    def fetch_chart(self, dataset: DataSet, html_parser_fn, start_date=None):
         dates = []
         cur = dataset.earliest_date
         if start_date:
@@ -57,26 +58,8 @@ class BillboardFetcher(Fetcher):
                 url,
                 headers=headers
             )
-            html_parser_fn(res.content, dataset, cur)
+            fetched_file = FetchedFile(self.provider, dataset, cur, datetime.datetime.now())
+            html_parser_fn(fetched_file, res.content)
             soup = BeautifulSoup(res.content, "lxml")
             cur = self.next_chart_date(soup)
         return dates
-
-    def save_as_html(self, content: bytes, dataset: Dataset, chart_date: datetime.date):
-        if " " in dataset.name:
-            raise Exception("chart_name must not contain spaces")
-        chart_file_name = (
-            self.provider.name + "_" + dataset.name + "_" +
-            chart_date.strftime("%Y%m%d") + datetime.datetime.now().strftime("_%Y%m%d") + ".html"
-        )
-        with open(
-                os.path.join(
-                    local_data_path,
-                    chart_file_name
-                ),
-            "wb") as htmlFile:
-            try:
-                htmlFile.write(content)
-            except Exception as e:
-                logging.error(f"Could not write {chart_file_name}", e)
-        logging.info(f"Successfully fetched {chart_file_name}")

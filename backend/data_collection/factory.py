@@ -1,14 +1,17 @@
 from fetcher import BillboardFetcher
-from provider import BillboardProvider
-
+from parsers import BillboardParser
+from models import BillboardProvider
+from inserters import ResourceInserter
 
 class Factory:
     def __init__(self):
         self.classes = {
             "billboard": 
                 {
-                    "fetcher": BillboardFetcher,
                     "provider": BillboardProvider,
+                    "fetcher": BillboardFetcher,
+                    "parser": BillboardParser,
+                    "inserter": ResourceInserter
                 }
         }
     def get_provider_cls(self, name):
@@ -18,9 +21,9 @@ class Factory:
         return self.classes[name]["fetcher"]
 
     def get_parser_cls(self, name):
-        raise NotImplementedError
+        return self.classes[name]["parser"]
 
     def get_inserter_cls(self, name):
-        raise NotImplementedError
+        return self.classes[name]["inserter"]
 
 factory = Factory()

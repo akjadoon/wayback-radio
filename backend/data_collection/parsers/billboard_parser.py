@@ -36,31 +36,48 @@ class BillboardParser(Parser):
         song = listItem.find('div', class_="chart-list-item__title").get_text().strip()
         rank = listItem.find('div', class_="chart-list-item__rank").get_text().strip()
 
-        listItem = soup.find('div', class_="chart-list-item__stats")
-        weeks_on_chart = listItem.find('div', class_="chart-list-item__weeks-on-chart").get_text().strip()
+        peak_position, weeks_on_chart, last_week, two_weeks_ago = self.parse_stats(soup)
 
-        last_week = listItem.find('div', class_="chart-list-item__last-week").get_text().strip()
+        song_writers, producers, imprint_promotion_label = self.parse_people_data(soup)
 
-        two_weeks_ago = None
-        song_writers = None
-        producers = None
-        awards = None
-        imprint_promotion_label = None
         riaa = None
         try:
             riaa = soup.find('div', class_="chart-list-item__riaa-heading").get_text().strip()
         except:
             pass
 
+        return BillboardChartItem(
+            artist,
+            song,
+            int(rank),
+            last_week,
+            two_weeks_ago,
+            peak_position,
+            weeks_on_chart,
+            riaa, 
+            song_writers,
+            producers,
+            imprint_promotion_label
+        )
+    
+    def parse_stats(self, chart_list_item: BeautifulSoup):
+        stats = chart_list_item.find('div', class_="chart-list-item__stats")
+        if not stats:
+            return None, None, None, None
+
+        weeks_on_chart = stats.find('div', class_="chart-list-item__weeks-on-chart").get_text().strip()
+        peak_position = stats.find('div', class_="chart-list-item__weeks-at-one").get_text().strip()
+        last_week = stats.find('div', class_="chart-list-item__last-week").get_text().strip()
         try:
-            two_weeks_ago = listItem.find_all('div', class_="chart-list-item__last-week")[1].get_text().strip()
+            two_weeks_ago = stats.find_all('div', class_="chart-list-item__last-week")[1].get_text().strip()
         except:
             logging.error("Could not find two_weeks_ago field")
+        return  peak_position, weeks_on_chart, last_week, two_weeks_ago 
 
-        weeks_on_chart = listItem.find('div', class_="chart-list-item__weeks-on-chart").get_text().strip()
-        peak_position = listItem.find('div', class_="chart-list-item__weeks-at-one").get_text().strip()
-
-        listItem = soup.find('div', class_="chart-list-item__people_data")
+    def parse_people_data(self, chart_list_item: BeautifulSoup):
+        people_data = chart_list_item.find('div', class_="chart-list-item__people_data")
+        if not people_data:
+            return None, None, None
         rxs = {
             "song_writers": r"(?:Songwriter\(s\):)([\s\S]*)",
             "producers": r"(?:Producer\(s\):)([\s\S]*)",
@@ -78,22 +95,11 @@ class BillboardParser(Parser):
                     producers = [s.strip() for s in producers_match[1].split(",")]
                 if  imprint_promotion_label_match:
                     imprint_promotion_label = imprint_promotion_label_match[1].strip()
+                return song_writers, producers, imprint_promotion_label
         except Exception as e:
-            logging.error("Could not find field", e)
-
-        return BillboardChartItem(
-            artist,
-            song,
-            int(rank),
-            last_week,
-            two_weeks_ago,
-            peak_position,
-            weeks_on_chart,
-            riaa, 
-            song_writers,
-            producers,
-            imprint_promotion_label
-        )
+            pass
+            # logging.error("Could not find field", e)
+        return None, None, None
 
     def parse_file(self, content: bytes, event_date: datetime.date) -> BillboardChart:
         soup = BeautifulSoup(content, "lxml")

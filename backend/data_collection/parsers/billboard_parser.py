@@ -98,15 +98,19 @@ class BillboardParser(Parser):
                 return song_writers, producers, imprint_promotion_label
         except Exception as e:
             pass
-            # logging.error("Could not find field", e)
         return None, None, None
 
+    def correctDuplicateRanks(self, chart_items: List[BillboardChartItem]) -> List[BillboardChartItem]:
+        for i in range(len(chart_items) - 1):
+            if chart_items[i].rank == chart_items[i + 1].rank:
+                chart_items[i + 1].rank += 1
+        return chart_items
+    
     def parse_file(self, content: bytes, event_date: datetime.date) -> BillboardChart:
         soup = BeautifulSoup(content, "lxml")
-        chartItems = [
+        chartItems = self.correctDuplicateRanks([
             self.parse_chart_item(chartItem)
             for i, chartItem in 
             enumerate(soup.find_all('div', class_="chart-list-item"))
-
-        ]
+        ])
         return BillboardChart(chartItems, event_date)
